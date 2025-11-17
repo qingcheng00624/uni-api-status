@@ -14,16 +14,16 @@ export async function GET(request: NextRequest) {
       const results = await query(
         `
         SELECT
-          COUNT(*) as requests,
-          COALESCE(SUM(total_tokens), 0) as totalTokens,
-          COALESCE(SUM(prompt_tokens), 0) as promptTokens,
-          COALESCE(SUM(completion_tokens), 0) as completionTokens,
-          COALESCE(AVG(process_time), 0) as avgProcessTime,
-          COALESCE(AVG(first_response_time), 0) as avgFirstResponseTime
-        FROM request_stats
-        WHERE api_key = $1 AND endpoint = 'POST /v1/chat/completions'
-      `,
-        [apiKey],
+          COUNT(DISTINCT r.request_id) as requests,
+          COALESCE(SUM(r.total_tokens), 0) as totalTokens,
+          COALESCE(SUM(r.prompt_tokens), 0) as promptTokens,
+          COALESCE(SUM(r.completion_tokens), 0) as completionTokens,
+          COALESCE(AVG(r.process_time), 0) as avgProcessTime,
+          COALESCE(AVG(r.first_response_time), 0) as avgFirstResponseTime
+        FROM request_stats r
+        WHERE r.api_key = $1 AND r.endpoint = $2
+        `,
+        [apiKey, "POST /v1/chat/completions"],
       )
 
       const stats = results[0] || {
@@ -37,7 +37,11 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json(stats)
     } catch (dbError) {
-      throw dbError
+      console.error("Database query error:", dbError);
+      return NextResponse.json({ 
+        error: "Database query failed", 
+        details: (dbError as Error).message 
+      }, { status: 500 })
     }
   } catch (error) {
     console.error("Error fetching overview stats:", error)
