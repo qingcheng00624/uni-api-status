@@ -16,21 +16,23 @@ export async function GET(request: NextRequest) {
         SELECT
           r.provider,
           COUNT(*) as requests,
-          COALESCE(SUM(CASE WHEN c.success = true THEN 1 ELSE 0 END), 0) as successes,
-          COALESCE(SUM(CASE WHEN c.success = false THEN 1 ELSE 0 END), 0) as failures,
-          COALESCE(AVG(CASE WHEN c.success = true THEN 1.0 ELSE 0.0 END), 0) as successRate,
+          COALESCE(SUM(CASE WHEN r.status_code >= 200 AND r.status_code < 300 THEN 1 ELSE 0 END), 0) as successes,
+          COALESCE(SUM(CASE WHEN r.status_code < 200 OR r.status_code >= 300 THEN 1 ELSE 0 END), 0) as failures,
+          COALESCE(
+            CAST(SUM(CASE WHEN r.status_code >= 200 AND r.status_code < 300 THEN 1 ELSE 0 END) AS FLOAT) / NULLIF(COUNT(*), 0),
+            0
+          ) as successRate,
           COALESCE(SUM(r.total_tokens), 0) as totalTokens,
           COALESCE(SUM(r.prompt_tokens), 0) as promptTokens,
           COALESCE(SUM(r.completion_tokens), 0) as completionTokens,
           COALESCE(AVG(r.process_time), 0) as avgProcessTime,
           COALESCE(AVG(r.first_response_time), 0) as avgFirstResponseTime
         FROM request_stats r
-        LEFT JOIN channel_stats c ON r.request_id = c.request_id
         WHERE r.api_key = $1 AND r.endpoint = 'POST /v1/chat/completions'
         GROUP BY r.provider
         ORDER BY requests DESC
-      `,
-        [apiKey],
+        `,
+        [apiKey]
       )
 
       return NextResponse.json(results)
