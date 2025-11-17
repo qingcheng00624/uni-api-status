@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
           COUNT(*) as requests,
           COALESCE(SUM(CASE WHEN c.success = true THEN 1 ELSE 0 END), 0) as successes,
           COALESCE(SUM(CASE WHEN c.success = false THEN 1 ELSE 0 END), 0) as failures,
-          COALESCE(AVG(CAST(c.success AS FLOAT)), 0) as successRate,
+          COALESCE(AVG(CASE WHEN c.success = true THEN 1.0 ELSE 0.0 END), 0) as successRate,
           COALESCE(SUM(r.total_tokens), 0) as totalTokens,
           COALESCE(SUM(r.prompt_tokens), 0) as promptTokens,
           COALESCE(SUM(r.completion_tokens), 0) as completionTokens,
