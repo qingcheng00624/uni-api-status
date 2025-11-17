@@ -92,12 +92,28 @@ export async function GET(request: NextRequest) {
       `;
       const finalParams = [...params, queryLimit, offset];
 
-      const results: LogRow[] = await query(sql, finalParams);
+      const results: any[] = await query(sql, finalParams);
 
       const hasNextPage = results.length > limit
       const logs = hasNextPage ? results.slice(0, limit) : results
 
-      return NextResponse.json({ logs, hasNextPage })
+      const cleanedLogs = logs.map((log: any) => ({
+        timestamp: log.timestamp || new Date().toISOString(),
+        success: Boolean(log.success),
+        model: log.model || 'unknown',
+        provider: log.provider || 'unknown',
+        processTime: Number(log.processtime) || 0,
+        firstResponseTime: Number(log.firstresponsetime) || 0,
+        promptTokens: Number(log.prompttokens) || 0,
+        completionTokens: Number(log.completiontokens) || 0,
+        totalTokens: Number(log.totaltokens) || 0,
+        text: log.text || ''
+      }));
+
+      return NextResponse.json({ 
+        logs: cleanedLogs, 
+        hasNextPage
+      })
 
     } catch (dbError) {
       console.error("Database query error:", dbError);
