@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
       const results = await query(
         `
         SELECT
-          r.model,
+          r.provider,
           COUNT(DISTINCT r.request_id) as requests,
           COALESCE(SUM(CASE WHEN c.success = true THEN 1 ELSE 0 END), 0) as successes,
           COALESCE(SUM(CASE WHEN c.success = false OR c.success IS NULL THEN 1 ELSE 0 END), 0) as failures,
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
         FROM request_stats r
         LEFT JOIN channel_stats c ON r.request_id = c.request_id
         WHERE r.api_key = $1 AND r.endpoint = $2
-        GROUP BY r.model
+        GROUP BY r.provider
         ORDER BY requests DESC
         `,
         [apiKey, "POST /v1/chat/completions"]
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
   } catch (error) {
-    console.error("Error fetching model stats:", error)
+    console.error("Error fetching channel stats:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
